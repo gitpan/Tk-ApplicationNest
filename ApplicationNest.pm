@@ -2,8 +2,8 @@ package Tk::ApplicationNest;
 #------------------------------------------------
 # automagically updated versioning variables -- CVS modifies these!
 #------------------------------------------------
-our $Revision           = '$Revision: 1.10 $';
-our $CheckinDate        = '$Date: 2003/08/18 11:26:39 $';
+our $Revision           = '$Revision: 1.1 $';
+our $CheckinDate        = '$Date: 2003/11/06 17:55:04 $';
 our $CheckinUser        = '$Author: xpix $';
 # we need to clean these up right here
 $Revision               =~ s/^\$\S+:\s*(.*?)\s*\$$/$1/sx;
@@ -22,12 +22,12 @@ use strict;
 use IO::File;
 use Tk::Balloon;
 use Tk::Getopt;
-use Tk::Splashscreen; 
 use Tk::ToolBar;
 use Tk::DialogBox;
 use Tk::ROText;
 
 use Data::Dumper;
+use Pod::Text;
 
 Construct Tk::Widget 'Program';
 
@@ -77,7 +77,6 @@ sub Populate {
            	);
 	
 	$obj->bind( "<Configure>", sub{ $obj->{opt}->{'Geometry'} = $obj->geometry } );
-	$obj->bind( "<Destroy>", sub{ $obj->{optobj}->save_options() } );
 	$obj->bind( "<Double-Escape>", sub { $obj->exit } );
 
 	$obj->Icon('-image' => $obj->Photo( -file => $obj->{icon} ) ) if($obj->{icon});
@@ -103,7 +102,7 @@ sub exit {
 # ------------------------------------------
 	my $obj = shift || return error('No Object');
 	$obj->Callback(-exit_cb);
-	$obj->{optobj}->save_options();
+	$obj->save_prefs;
 	exit; 
 }
 
@@ -136,9 +135,12 @@ sub set_logo {
 sub help {
 # ------------------------------------------
 	my $obj = shift || return error('No Object');
+	my $pod = $obj->{help};
+
 	unless(defined $obj->{pod_text}) {
-		$obj->{pod_text} = `pod2text $0`;
+		$obj->{pod_text} = `pod2text $pod`;
 	}	
+
 	$obj->{pod_window}->{dialog} = my $dialog = $obj->DialogBox(
 		-title          => sprintf('Help for %s:', $obj->{app}),
 		-buttons        => [ 'Ok' ],
@@ -147,7 +149,9 @@ sub help {
 	my $e = $dialog->Scrolled(
 		'ROText',
 		-scrollbars => 'osoe',
-	)->pack;
+	)->pack(-expand => 1, -fill => 'both');
+
+	$obj->{pod_text} =~ s/\r//sig;
 	$e->insert('end', $obj->{pod_text});
 
 	my $answer = $dialog->Show;
@@ -170,9 +174,9 @@ sub splash {
 	my $text = shift;	
         
 	if($obj->{splash} and ! $mseconds) {
-		$obj->{splash}->Destroy();
+		$obj->{splash}->destroy();
 	} elsif(defined $obj->{logo} or defined $text) {
-		$obj->{splash} = $obj->Splashscreen;
+		$obj->{splash} = $obj->Toplevel;
 
 		$obj->{splash}->Label(
 			-image => $obj->set_logo,
@@ -182,11 +186,16 @@ sub splash {
 			-textvariable => $text,  
 			)->pack()	if($text); 
 
-		$obj->{splash}->Splash();
-		$obj->{splash}->Destroy( $mseconds );
+		if($mseconds) {
+			my $des = $obj->after($mseconds,  
+				sub{ $obj->{splash}->destroy() }
+			);
+			$obj->{splash}->OnDestroy(sub{ $des->cancel });
+		}
+
 		return $obj->{splash};
 	} else {
-		return error('Can\'t find a logo. Please define first -set_logo!');
+		return error('Can\'t find a logo or text to display. Please define first -set_logo!');
 	}
 
 }
@@ -267,6 +276,7 @@ sub add_toolbar {
 			-movable => 1,
 			-side => 'top',
 			);
+		$obj->Advertise('toolbar' => $obj->{toolbar});
 	}
 	$obj->{toolbar}->$typ(@par);
 }
@@ -330,6 +340,15 @@ sub init_prefs {
 	$obj->{optobj}->process_options;
 	return $obj->{opt};
 }
+
+# ------------------------------------------
+sub save_prefs {
+# ------------------------------------------
+	my $obj = shift || return error('No Object');
+	return $obj->{optobj}->save_options() 
+		if defined $obj->{optobj}; 
+}
+
 
 # ------------------------------------------
 sub get_prefs {
@@ -714,45 +733,22 @@ You can use the advertise widget with the following command '$top->Subwidget('na
 
 =head2 B<status_I<name>>: StatusEntry from $top->add_status
 
+=head2 B<toolbar>: Toolbar, if created
+
 =head1 BINDINGS
 
 =head2 I<Double-Escape>: Exit the Programm
 
 =head1 CHANGES
 
-  $Log: Program.pm,v $
+  $Log: ApplicationNest.pm,v $
+  Revision 1.1  2003/11/06 17:55:04  xpix
+  * new Modulname Tk::ApplicationNest
+  - little bug fixes and doku changes
+
   Revision 1.10  2003/08/18 11:26:39  xpix
   * better debug routine
 
-  Revision 1.9  2003/06/24 10:10:47  xpix
-  * add Tk::CmdLine for X-Options process. Thanks Clemens ;-)
-
-  Revision 1.8  2003/06/23 16:15:19  xpix
-  ! cvs error
-
-  Revision 1.7  2003/06/20 13:53:18  xpix
-  ! wrong english in font dialog ;-)
-
-  Revision 1.6  2003/06/20 12:52:27  xpix
-  ! change from Tk::Pod to standart way with ROText
-
-  Revision 1.5  2003/06/06 16:48:11  xpix
-  * add toolbar function
-  ! liitle bugfix in change font
-
-  Revision 1.4  2003/06/06 12:56:03  xpix
-  * correct docu, thanks on susy ;-)
-
-  Revision 1.3  2003/06/05 15:32:26  xpix
-  * with new Module Tk::ApplicationNest
-  ! unitialized values in tm2unix
-
-  Revision 1.2  2003/06/05 12:51:56  xpix
-  ! add better docu
-  * add help function
-
-  Revision 1.1  2003/06/04 17:14:35  xpix
-  * New Modul for standart way to build a Programwindow.
 
 =head1 AUTHOR
 

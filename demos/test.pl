@@ -28,10 +28,6 @@ my $mw = Tk::ApplicationNest->new(
   	],
 );
 
-# Splash for 2000 Milliseconds
-$mw->splash( 2000 );
-
-
 # MENU ------------------------------
 my $edit_menu = $mw->Menu();
 $edit_menu->command(-label => '~Copy', -command => sub{ print "Choice Copy \n" });
@@ -50,13 +46,13 @@ $widget->insert('end', 'Exampletext ....');
 my $status = {
 	One => 'Status one',
 	Full => 'Full sentence ....',
-	Time => sprintf('%d seconds', time),
+	Time => sprintf('Time: %s', scalar localtime),
 	widget => $widget, 
 };
 
 # Refresh Status field 
 $mw->repeat(999, sub{
-	$status->{Time} = sprintf('%d seconds', time);
+	$status->{Time} = sprintf('Time: %s', scalar localtime);
 });
 
 # Add Status fields
@@ -75,7 +71,9 @@ $mw->add_toolbar('LabEntry', -label => 'Label', -text => 'Laber');
 # TOOLBAR ------------------------------
 
 # MainFrame
-my $t = $mw->Subwidget('main')->Scrolled('ROText')->pack(
+my $t = $mw->Subwidget('main')->Scrolled('ROText', 		
+		-scrollbars => 'osoe',
+		)->pack(
 		-expand => 1, 
 		-fill => 'both'); 
 $t->insert('end', `cat $0`);
